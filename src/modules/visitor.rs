@@ -1,6 +1,7 @@
 use rustc_ast::ast;
 use rustc_ast::visit::Visitor;
-use rustc_span::Symbol;
+use rustc_span::{Symbol, sym};
+use tracing::debug;
 
 use crate::attr::MetaVisitor;
 use crate::parse::macros::cfg_if::parse_cfg_if;
@@ -12,15 +13,15 @@ pub(crate) struct ModItem {
 
 /// Traverse `cfg_if!` macro and fetch modules.
 pub(crate) struct CfgIfVisitor<'a> {
-    parse_sess: &'a ParseSess,
+    psess: &'a ParseSess,
     mods: Vec<ModItem>,
 }
 
 impl<'a> CfgIfVisitor<'a> {
-    pub(crate) fn new(parse_sess: &'a ParseSess) -> CfgIfVisitor<'a> {
+    pub(crate) fn new(psess: &'a ParseSess) -> CfgIfVisitor<'a> {
         CfgIfVisitor {
             mods: vec![],
-            parse_sess,
+            psess,
         }
     }
 
@@ -62,7 +63,7 @@ impl<'a, 'ast: 'a> CfgIfVisitor<'a> {
             }
         };
 
-        let items = parse_cfg_if(self.parse_sess, mac)?;
+        let items = parse_cfg_if(self.psess, mac)?;
         self.mods
             .append(&mut items.into_iter().map(|item| ModItem { item }).collect());
 
@@ -89,7 +90,7 @@ impl<'ast> MetaVisitor<'ast> for PathVisitor {
         meta_item: &'ast ast::MetaItem,
         lit: &'ast ast::MetaItemLit,
     ) {
-        if meta_item.has_name(Symbol::intern("path")) && lit.kind.is_str() {
+        if meta_item.has_name(sym::path) && lit.kind.is_str() {
             self.paths.push(meta_item_lit_to_str(lit));
         }
     }
